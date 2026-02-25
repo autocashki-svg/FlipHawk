@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlipHawk — Finden. Filtern. Flippen.</title>
+    <meta name="description" content="FlipHawk durchsucht Kleinanzeigen-Portale in Echtzeit und findet die besten Deals für dich.">
+    <meta name="keywords" content="Kleinanzeigen, Deals, Arbitrage, Reselling, eBay Kleinanzeigen, Marktplatz">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="FlipHawk — Finden. Filtern. Flippen.">
+    <meta property="og:description" content="Die intelligenteste Art, profitable Deals zu finden.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://fliphawk.de/og-image.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FlipHawk — Finden. Filtern. Flippen.">
+    <meta name="twitter:description" content="Die intelligenteste Art, profitable Deals zu finden.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23ff6b35'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white'%3E🦅%3C/text%3E%3C/svg%3E">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
+    <style>
+        :root {
+            /* Colors */
+            --color-bg: #0a0a0f;
+            --color-bg-elevated: #0f0f16;
+            --color-surface: #12121a;
+            --color-surface-hover: #1a1a25;
+            --color-surface-elevated: #1e1e2d;
+            --color-border: rgba(255, 255, 255, 0.08);
+            --color-border-hover: rgba(255, 255, 255, 0.15);
+            
+            /* Text */
+            --color-text: #ffffff;
+            --color-text-secondary: rgba(255, 255, 255, 0.7);
+            --color-text-muted: rgba(255, 255, 255, 0.5);
+            
+            /* Brand Colors */
+            --color-primary: #ff6b35;
+            --color-primary-light: #ff8c5a;
+            --color-primary-dark: #e55a2b;
+            --color-accent: #00d4aa;
+            --color-accent-light: #00f0c0;
+            --color-accent-dark: #00b894;
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 50%, #ffa07a 100%);
+            --gradient-accent: linear-gradient(135deg, #00d4aa 0%, #00f0c0 100%);
+            --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 107, 53, 0.15), transparent);
+            --gradient-glow: radial-gradient(circle at center, rgba(255, 107, 53, 0.4) 0%, transparent 70%);
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 60px rgba(255, 107, 53, 0.3);
+            --shadow-glow-accent: 0 0 40px rgba(0, 212, 170, 0.3);
+            
+            /* Radius */
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            
+            /* Spacing */
+            --section-padding: 120px;
+            --container-max: 1200px;
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 250ms ease;
+            --transition-slow: 400ms ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Selection */
+        ::selection {
+            background: rgba(255, 107, 53, 0.3);
+            color: white;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-surface-elevated);
+            border-radius: var(--radius-full);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary);
+        }
+
+        /* ============================================
+           NAVIGATION
+        ============================================ */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            transition: all var(--transition-base);
+        }
+
+        .nav.scrolled {
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .nav-container {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--color-text);
+            text-decoration: none;
+            transition: transform var(--transition-fast);
+        }
+
+        .logo:hover {
+            transform: scale(1.02);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color var(--transition-fast);
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transition: width var(--transition-fast);
+        }
+
+        .nav-link:hover {
+            color: var(--color-text);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all var(--transition-fast);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* ============================================
+           HERO SECTION
+        ============================================ */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8rem 1.5rem var(--section-padding);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-hero);
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 107, 53, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 107, 53, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent);
+            pointer-events: none;
+        }
+
+        .hero-glow {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: var(--gradient-glow);
+            filter: blur(80px);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            color: var(--color-primary-light);
+            margin-bottom: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .hero-badge-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-accent);
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-title-accent {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2vw, 1.35rem);
+            color: var(--color-text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.7;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--color-text);
+            border: 1px solid var(--color-border-hover);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-surface);
+            border-color: var(--color-primary);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--color-text);
+            display: block;
+        }
+
+        .hero-stat-label {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        /* ============================================
+           DEMO SECTION
+        ============================================ */
+        .demo-section {
+            padding: 0 1.5rem 4rem;
+            position: relative;
+        }
+
+        .demo-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .demo-frame {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg), 0 0 100px rgba(255, 107, 53, 0.1);
+        }
+
+        .demo-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.25rem;
+            background: var(--color-surface-elevated);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .demo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .demo-dot-red { background: #ff5f56; }
+        .demo-dot-yellow { background: #ffbd2e; }
+        .demo-dot-green { background: #27c93f; }
+
+        .demo-content {
+            padding: 2rem;
+            background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg-elevated) 100%);
+        }
+
+        .demo-search {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .demo-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.875rem 1rem;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text);
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        .demo-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .demo-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .demo-filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .demo-filter {
+            padding: 0.5rem 1rem;
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .demo-filter.active {
+            background: rgba(0, 212, 170, 0.1);
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+
+        .demo-results {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .demo-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+        }
+
+        .demo-item:hover {
+            border-color: var(--color-border-hover);
+            transform: translateX(4px);
+        }
+
+        .demo-item-img {
+            width: 80px;
+            height: 80px;
+            background: var(--color-bg);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .demo-item-content {
+            flex: 1;
+        }
+
+        .demo-item-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .demo-item-meta {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .demo-item-price {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .demo-price-current {
+            font-weight: 700;
+            color: var(--color-accent);
+            font-size: 1.1rem;
+        }
+
+        .demo-price-estimated {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            text-decoration: line-through;
+        }
+
+        .demo-profit {
+            margin-left: auto;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--color-accent);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        /* ============================================
+           FEATURES SECTION
+        ============================================ */
+        .section {
+            padding: var(--section-padding) 1.5rem;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            padding: 0.375rem 1rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--color-primary-light);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: var(--color-text-secondary);
+        }
+
+        .features-grid {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform var(--transition-base);
+        }
+
+        .feature-card:hover {
+            border-color: var(--color-border-hover);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.25);
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* ============================================
+           HOW IT WORKS
+        ============================================ */
+        .steps-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 0.5rem;
+        }
+
+        .step-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-desc {
+            color: var(--color-text-secondary);
+        }
+
+        /* ============================================
+           PRICING SECTION
+        ============================================ */
+        .pricing-grid {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .pricing-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            position: relative;
+            transition: all var(--transition-base);
+        }
+
+        .pricing-card:hover {
+            border-color: var(--color-border-hover);
+            transform: translateY(-4px);
+        }
+
+        .pricing-card.featured {
+            background: var(--color-surface-elevated);
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-glow);
+            transform: scale(1.02);
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.02) translateY(-4px);
+        }
+
+        .pricing-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.375rem 1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .pricing-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-desc {
+            color: var(--color-text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pricing-price {
+            display: flex;
+            align-items: baseline;
+            gap: 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pricing-amount {
+            font-size: 3rem;
+            font-weight: 800;
+        }
+
+        .pricing-period {
+            color: var(--color-text-muted);
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .pricing-feature::before {
+            content: '✓';
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--color-accent);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .pricing-feature.disabled {
+            color: var(--color-text-muted);
+            text-decoration: line-through;
+        }
+
+        .pricing-feature.disabled::before {
+            content: '×';
+            background: var(--color-surface-hover);
+            color: var(--color-text-muted);
+        }
+
+        .pricing-btn {
+            width: 100%;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            font-family: inherit;
+        }
+
+        .pricing-btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .pricing-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .pricing-btn-secondary {
+            background: transparent;
+            color: var(--color-text);
+            border: 1px solid var(--color-border-hover);
+        }
+
+        .pricing-btn-secondary:hover {
+            background: var(--color-surface-hover);
+            border-color: var(--color-primary);
+        }
+
+        /* ============================================
+           TESTIMONIALS
+        ============================================ */
+        .testimonials-grid {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .testimonial-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all var(--transition-base);
+        }
+
+        .testimonial-card:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        .testimonial-stars {
+            color: #ffc107;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .testimonial-text {
+            color: var(--color-text-secondary);
+            font-size: 1rem;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .testimonial-avatar {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .testimonial-info {
+            flex: 1;
+        }
+
+        .testimonial-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .testimonial-role {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        /* ============================================
+           CTA SECTION
+        ============================================ */
+        .cta-section {
+            padding: var(--section-padding) 1.5rem;
+        }
+
+        .cta-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .cta-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            background: var(--gradient-glow);
+            filter: blur(100px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .cta-title {
+            font-size: clamp(1.75rem, 3vw, 2.5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .cta-subtitle {
+            color: var(--color-text-secondary);
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+        }
+
+        /* ============================================
+           FOOTER
+        ============================================ */
+        .footer {
+            padding: 4rem 1.5rem 2rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .footer-container {
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr repeat(3, 1fr);
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand {
+            max-width: 300px;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--color-text);
+            text-decoration: none;
+            margin-bottom: 1rem;
+        }
+
+        .footer-desc {
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .footer-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted);
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-link {
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-link a {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color var(--transition-fast);
+        }
+
+        .footer-link a:hover {
+            color: var(--color-primary);
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--color-border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-copyright {
+            color: var(--color-text-muted);
+            font-size: 0.875rem;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .footer-social-link {
+            width: 40px;
+            height: 40px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            transition: all var(--transition-fast);
+        }
+
+        .footer-social-link:hover {
+            background: var(--color-surface-hover);
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           MODAL
+        ============================================ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-base);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            max-width: 450px;
+            width: 90%;
+            transform: scale(0.95) translateY(20px);
+            transition: all var(--transition-base);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: color var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            color: var(--color-text);
+        }
+
+        .modal-text {
+            color: var(--color-text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-input {
+            padding: 0.875rem 1rem;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color var(--transition-fast);
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .modal-btn {
+            padding: 1rem;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .modal-success {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+
+        .modal-success-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--gradient-accent);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: var(--shadow-glow-accent);
+        }
+
+        /* ============================================
+           RESPONSIVE
+        ============================================ */
+        @media (max-width: 1024px) {
+            :root {
+                --section-padding: 80px;
+            }
+
+            .footer-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .hero {
+                padding-top: 6rem;
+            }
+
+            .hero-stats {
+                gap: 2rem;
+            }
+
+            .features-grid,
+            .pricing-grid,
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.featured {
+                transform: none;
+            }
+
+            .pricing-card.featured:hover {
+                transform: translateY(-4px);
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .demo-search {
+                flex-direction: column;
+            }
+
+            .demo-item {
+                flex-direction: column;
+            }
+
+            .demo-item-img {
+                width: 100%;
+                height: 120px;
+            }
+        }
+
+        /* ============================================
+           ANIMATIONS
+        ============================================ */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            transform: translateX(150%);
+            transition: transform var(--transition-base);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--gradient-accent);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
+
+        .toast-message {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">🦅</div>
+                FlipHawk
+            </a>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">So funktioniert's</a>
+                <a href="#pricing" class="nav-link">Preise</a>
+                <a href="#" class="nav-cta" onclick="openWaitlist('Pro'); return false;">Early Access</a>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-grid"></div>
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                Bald verfügbar — Jetzt Early Access sichern
+            </div>
+            <h1 class="hero-title">
+                Finde profitable Deals.<br>
+                <span class="hero-title-accent">Bevor alle anderen.</span>
+            </h1>
+            <p class="hero-subtitle">
+                FlipHawk durchsucht Kleinanzeigen-Portale in Echtzeit, filtert nach deinen Kriterien und alarmiert dich sofort, wenn ein lohnenswerter Deal auftaucht.
+            </p>
+            <div class="hero-cta-group">
+                <button class="btn btn-primary" onclick="openWaitlist('Pro')">
+                    🚀 Early Access sichern
+                </button>
+                <a href="#demo" class="btn btn-secondary">
+                    📱 Demo ansehen
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-value">50K+</span>
+                    <span class="hero-stat-label">Anzeigen/Tag</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value">&lt;30s</span>
+                    <span class="hero-stat-label">Reaktionszeit</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value">€2.4M</span>
+                    <span class="hero-stat-label">User-Profit</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section" id="demo">
+        <div class="demo-container">
+            <div class="demo-frame">
+                <div class="demo-header">
+                    <div class="demo-dot demo-dot-red"></div>
+                    <div class="demo-dot demo-dot-yellow"></div>
+                    <div class="demo-dot demo-dot-green"></div>
+                    <span style="margin-left: auto; color: var(--color-text-muted); font-size: 0.875rem;">FlipHawk Dashboard</span>
+                </div>
+                <div class="demo-content">
+                    <div class="demo-search">
+                        <input type="text" class="demo-input" placeholder="Was suchst du? (z.B. iPhone, PS5, Fahrrad...)" value="PlayStation 5">
+                        <input type="text" class="demo-input" placeholder="Standort" value="Berlin" style="max-width: 150px;">
+                        <button class="demo-btn">🔍 Suchen</button>
+                    </div>
+                    <div class="demo-filters">
+                        <div class="demo-filter active">💰 Max €400</div>
+                        <div class="demo-filter active">📍 50km Umkreis</div>
+                        <div class="demo-filter">🆓 Nur Versand</div>
+                        <div class="demo-filter active">⚡ Neu eingestellt</div>
+                    </div>
+                    <div class="demo-results">
+                        <div class="demo-item">
+                            <div class="demo-item-img">🎮</div>
+                            <div class="demo-item-content">
+                                <div class="demo-item-title">PlayStation 5 Digital Edition</div>
+                                <div class="demo-item-meta">Berlin • vor 3 Minuten • 12 Aufrufe</div>
+                                <div class="demo-item-price">
+                                    <span class="demo-price-current">€350</span>
+                                    <span class="demo-price-estimated">€480</span>
+                                    <span class="demo-profit">+€130 Profit</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="demo-item">
+                            <div class="demo-item-img">🎮</div>
+                            <div class="demo-item-content">
+                                <div class="demo-item-title">PS5 mit 2 Controllern &amp; Games</div>
+                                <div class="demo-item-meta">Potsdam • vor 8 Minuten • 5 Aufrufe</div>
+                                <div class="demo-item-price">
+                                    <span class="demo-price-current">€420</span>
+                                    <span class="demo-price-estimated">€650</span>
+                                    <span class="demo-profit">+€230 Profit</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="demo-item">
+                            <div class="demo-item-img">🎮</div>
+                            <div class="demo-item-content">
+                                <div class="demo-item-title">Sony PlayStation 5 Disc Edition</div>
+                                <div class="demo-item-meta">Berlin-Mitte • vor 12 Minuten • 28 Aufrufe</div>
+                                <div class="demo-item-price">
+                                    <span class="demo-price-current">€380</span>
+                                    <span class="demo-price-estimated">€550</span>
+                                    <span class="demo-profit">+€170 Profit</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="section-header">
+            <span class="section-label">Features</span>
+            <h2 class="section-title">Alles, was du zum Flippen brauchst</h2>
+            <p class="section-subtitle">Intelligente Tools, die dir den entscheidenden Vorteil verschaffen.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card fade-in">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">Echtzeit-Suche</h3>
+                <p class="feature-desc">Wir überwachen Kleinanzeigen-Portale 24/7 und zeigen dir neue Angebote innerhalb von Sekunden – nicht Stunden.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">Smarte Filter</h3>
+                <p class="feature-desc">Filtere nach Preis, Zustand, Standort, Verkäufer-Rating und mehr. Nur die Deals, die wirklich relevant sind.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🔔</div>
+                <h3 class="feature-title">Instant Alerts</h3>
+                <p class="feature-desc">Push-Benachrichtigungen per App, E-Mail oder Discord – du verpasst nie wieder einen guten Deal.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">📊</div>
+                <h3 class="feature-title">Profit-Kalkulator</h3>
+                <p class="feature-desc">Automatische Schätzung des Wiederverkaufswerts basierend auf aktuellen Marktdaten.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">Auto-Responder</h3>
+                <p class="feature-desc">Automatische Nachrichten an Verkäufer – sei der Erste, ohne ständig am Handy zu sein.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">📈</div>
+                <h3 class="feature-title">Analytics Dashboard</h3>
+                <p class="feature-desc">Verfolge deine Performance: Gewinne, erfolgreiche Flips, durchschnittliche Margen und mehr.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section" id="how-it-works">
+        <div class="section-header">
+            <span class="section-label">So funktioniert's</span>
+            <h2 class="section-title">In 3 Schritten zum Profit</h2>
+            <p class="section-subtitle">Keine komplexe Einrichtung. Keine Lernkurve. Einfach loslegen.</p>
+        </div>
+        <div class="steps-container">
+            <div class="steps">
+                <div class="step fade-in">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Suchanfrage erstellen</h3>
+                        <p class="step-desc">Definiere, wonach du suchst – Produkt, Kategorie, Preisbereich, Standort. So spezifisch oder breit wie du willst.</p>
+                    </div>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Auf Alerts warten</h3>
+                        <p class="step-desc">Wir überwachen alle relevanten Portale und schicken dir sofort eine Benachrichtigung, wenn ein passender Deal auftaucht.</p>
+                    </div>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Deal sichern &amp; flippen</h3>
+                        <p class="step-desc">Kontaktiere den Verkäufer, hole das Produkt ab (oder liefere es dir) und verkaufe es mit Gewinn weiter.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="section" id="pricing">
+        <div class="section-header">
+            <span class="section-label">Preise</span>
+            <h2 class="section-title">Wähle deinen Plan</h2>
+            <p class="section-subtitle">Starte kostenlos und upgrade, wenn du bereit bist zu skalieren.</p>
+        </div>
+        <div class="pricing-grid">
+            <!-- Starter -->
+            <div class="pricing-card fade-in">
+                <div class="pricing-name">Starter</div>
+                <div class="pricing-desc">Für Gelegenheits-Flipper</div>
+                <div class="pricing-price">
+                    <span class="pricing-amount">€0</span>
+                    <span class="pricing-period">/Monat</span>
+                </div>
+                <ul class="pricing-features">
+                    <li class="pricing-feature">3 aktive Suchanfragen</li>
+                    <li class="pricing-feature">E-Mail Alerts</li>
+                    <li class="pricing-feature">Basis-Filter</li>
+                    <li class="pricing-feature">Community Support</li>
+                    <li class="pricing-feature disabled">Push-Notifications</li>
+                    <li class="pricing-feature disabled">Auto-Responder</li>
+                    <li class="pricing-feature disabled">Analytics</li>
+                </ul>
+                <button class="pricing-btn pricing-btn-secondary" onclick="openWaitlist('Starter')">Kostenlos starten</button>
+            </div>
+
+            <!-- Pro (Featured) -->
+            <div class="pricing-card featured fade-in">
+                <div class="pricing-badge">Beliebt</div>
+                <div class="pricing-name">Pro</div>
+                <div class="pricing-desc">Für aktive Reseller</div>
+                <div class="pricing-price">
+                    <span class="pricing-amount">€29</span>
+                    <span class="pricing-period">/Monat</span>
+                </div>
+                <ul class="pricing-features">
+                    <li class="pricing-feature">Unbegrenzte Suchanfragen</li>
+                    <li class="pricing-feature">E-Mail + Push Alerts</li>
+                    <li class="pricing-feature">Erweiterte Filter</li>
+                    <li class="pricing-feature">Priority Support</li>
+                    <li class="pricing-feature">Profit-Kalkulator</li>
+                    <li class="pricing-feature">Analytics Dashboard</li>
+                    <li class="pricing-feature disabled">Auto-Responder</li>
+                </ul>
+                <button class="pricing-btn pricing-btn-primary" onclick="openWaitlist('Pro')">Jetzt sichern</button>
+            </div>
+
+            <!-- Reseller -->
+            <div class="pricing-card fade-in">
+                <div class="pricing-name">Reseller</div>
+                <div class="pricing-desc">Für Profis &amp; Teams</div>
+                <div class="pricing-price">
+                    <span class="pricing-amount">€79</span>
+                    <span class="pricing-period">/Monat</span>
+                </div>
+                <ul class="pricing-features">
+                    <li class="pricing-feature">Alles aus Pro</li>
+                    <li class="pricing-feature">Auto-Responder Bot</li>
+                    <li class="pricing-feature">API-Zugang</li>
+                    <li class="pricing-feature">Discord Integration</li>
+                    <li class="pricing-feature">5 Team-Mitglieder</li>
+                    <li class="pricing-feature">White-Label Option</li>
+                    <li class="pricing-feature">Dedicated Support</li>
+                </ul>
+                <button class="pricing-btn pricing-btn-secondary" onclick="openWaitlist('Reseller')">Kontaktiere uns</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="section" id="testimonials">
+        <div class="section-header">
+            <span class="section-label">Testimonials</span>
+            <h2 class="section-title">Was unsere User sagen</h2>
+            <p class="section-subtitle">Echte Flipper, echte Ergebnisse.</p>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card fade-in">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"FlipHawk hat mein Reselling-Game komplett verändert. Ich finde jetzt Deals, die ich vorher nie gesehen hätte. In 3 Monaten über €4.000 Profit gemacht."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">MK</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Markus K.</div>
+                        <div class="testimonial-role">Tech-Flipper aus München</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card fade-in">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"Die Alerts sind unglaublich schnell. Ich war bei einem iPhone-Deal 2 Minuten nach Einstellung der Erste – für €200 unter Marktpreis."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">SL</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Sarah L.</div>
+                        <div class="testimonial-role">Part-time Reseller</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card fade-in">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"Als Reseller-Team nutzen wir die API-Integration. Automatisierte Alerts direkt in unseren Discord – das spart uns Stunden pro Tag."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">TW</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Team Wholesale</div>
+                        <div class="testimonial-role">Reseller-Gruppe (12 Personen)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-container">
+            <div class="cta-glow"></div>
+            <h2 class="cta-title">Bereit, den ersten Move zu machen?</h2>
+            <p class="cta-subtitle">Sichere dir jetzt Early Access und sei unter den Ersten, die FlipHawk nutzen. Limited Spots verfügbar.</p>
+            <button class="btn btn-primary" onclick="openWaitlist('Pro')" style="position: relative;">
+                🚀 Early Access sichern
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="footer-logo">
+                        <div class="logo-icon" style="width: 36px; height: 36px; font-size: 1.1rem;">🦅</div>
+                        FlipHawk
+                    </a>
+                    <p class="footer-desc">Die intelligenteste Art, profitable Kleinanzeigen-Deals zu finden. Entwickelt von Flippern für Flipper.</p>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-title">Produkt</h4>
+                    <ul class="footer-links">
+                        <li class="footer-link"><a href="#features">Features</a></li>
+                        <li class="footer-link"><a href="#pricing">Preise</a></li>
+                        <li class="footer-link"><a href="#" onclick="openWaitlist('Pro'); return false;">Early Access</a></li>
+                        <li class="footer-link"><a href="#">Changelog</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-title">Ressourcen</h4>
+                    <ul class="footer-links">
+                        <li class="footer-link"><a href="#">Blog</a></li>
+                        <li class="footer-link"><a href="#">Guides</a></li>
+                        <li class="footer-link"><a href="#">Discord Community</a></li>
+                        <li class="footer-link"><a href="#">API Docs</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-title">Rechtliches</h4>
+                    <ul class="footer-links">
+                        <li class="footer-link"><a href="#">Impressum</a></li>
+                        <li class="footer-link"><a href="#">Datenschutz</a></li>
+                        <li class="footer-link"><a href="#">AGB</a></li>
+                        <li class="footer-link"><a href="#">Kontakt</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 FlipHawk. Alle Rechte vorbehalten.</p>
+                <div class="footer-social">
+                    <a href="#" class="footer-social-link" title="Twitter">𝕏</a>
+                    <a href="#" class="footer-social-link" title="Discord">💬</a>
+                    <a href="#" class="footer-social-link" title="Instagram">📷</a>
+                    <a href="#" class="footer-social-link" title="YouTube">▶️</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Waitlist Modal -->
+    <div class="modal-overlay" id="waitlistModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🚀 Early Access</h3>
+                <button class="modal-close" onclick="closeWaitlist()">×</button>
+            </div>
+            <div id="modalFormContent">
+                <p class="modal-text">Sichere dir jetzt einen Platz auf der Warteliste. Wir schicken dir einen exklusiven Zugangscode, sobald wir live gehen.</p>
+                <form class="modal-form" onsubmit="submitWaitlist(event)">
+                    <input type="email" class="modal-input" placeholder="Deine E-Mail-Adresse" required id="waitlistEmail">
+                    <input type="hidden" id="waitlistPlan" value="Pro">
+                    <button type="submit" class="modal-btn" id="waitlistSubmitBtn">
+                        Auf die Warteliste
+                    </button>
+                </form>
+            </div>
+            <div id="modalSuccessContent" class="modal-success" style="display: none;">
+                <div class="modal-success-icon">✓</div>
+                <h3 style="margin-bottom: 0.5rem;">Du bist drauf!</h3>
+                <p style="color: var(--color-text-secondary);">Wir schicken dir bald einen Zugangscode.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">✓</div>
+        <span class="toast-message" id="toastMessage">Erfolgreich!</span>
+    </div>
+
+    <script>
+        // ============================================
+        // STRIPE CONFIGURATION
+        // ============================================
+        const STRIPE_CONFIG = {
+            // Replace with your Stripe publishable key
+            publishableKey: 'pk_test_YOUR_PUBLISHABLE_KEY_HERE',
+            
+            // Replace with your Stripe price IDs
+            prices: {
+                pro_monthly: 'price_PRO_MONTHLY_ID',
+                pro_yearly: 'price_PRO_YEARLY_ID',
+                reseller_monthly: 'price_RESELLER_MONTHLY_ID'
+            },
+            
+            // Backend endpoint for creating checkout sessions
+            checkoutEndpoint: '/api/create-checkout-session',
+            
+            // Success and cancel URLs
+            successUrl: window.location.origin + '/success.html',
+            cancelUrl: window.location.origin + '/?canceled=true'
+        };
+
+        // Initialize Stripe (only if key is set)
+        let stripe = null;
+        if (STRIPE_CONFIG.publishableKey && !STRIPE_CONFIG.publishableKey.includes('YOUR_')) {
+            stripe = Stripe(STRIPE_CONFIG.publishableKey);
+        }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        const nav = document.getElementById('nav');
+        
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // ============================================
+        // WAITLIST MODAL
+        // ============================================
+        const modal = document.getElementById('waitlistModal');
+        const modalFormContent = document.getElementById('modalFormContent');
+        const modalSuccessContent = document.getElementById('modalSuccessContent');
+        const waitlistPlanInput = document.getElementById('waitlistPlan');
+
+        function openWaitlist(plan = 'Pro') {
+            waitlistPlanInput.value = plan;
+            modalFormContent.style.display = 'block';
+            modalSuccessContent.style.display = 'none';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeWaitlist() {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeWaitlist();
+        });
+
+        async function submitWaitlist(e) {
+            e.preventDefault();
+            const email = document.getElementById('waitlistEmail').value;
+            const plan = waitlistPlanInput.value;
+            const btn = document.getElementById('waitlistSubmitBtn');
+            
+            // Loading state
+            btn.innerHTML = '<div class="spinner"></div>';
+            btn.disabled = true;
+
+            try {
+                // Here you would typically send to your backend
+                // For now, simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Show success
+                modalFormContent.style.display = 'none';
+                modalSuccessContent.style.display = 'block';
+                
+                // Store in localStorage
+                const waitlist = JSON.parse(localStorage.getItem('fliphawk_waitlist') || '[]');
+                waitlist.push({ email, plan, date: new Date().toISOString() });
+                localStorage.setItem('fliphawk_waitlist', JSON.stringify(waitlist));
+                
+                showToast('Erfolgreich zur Warteliste hinzugefügt!');
+            } catch (error) {
+                showToast('Fehler. Bitte versuche es erneut.');
+                btn.innerHTML = 'Auf die Warteliste';
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================
+        // STRIPE CHECKOUT
+        // ============================================
+        async function startCheckout(plan) {
+            if (!stripe) {
+                // Stripe not configured, show waitlist instead
+                openWaitlist(plan);
+                return;
+            }
+
+            const priceId = STRIPE_CONFIG.prices[plan];
+            if (!priceId || priceId.includes('YOUR_')) {
+                openWaitlist(plan);
+                return;
+            }
+
+            try {
+                const response = await fetch(STRIPE_CONFIG.checkoutEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        priceId: priceId,
+                        plan: plan,
+                        successUrl: STRIPE_CONFIG.successUrl + '?plan=' + plan,
+                        cancelUrl: STRIPE_CONFIG.cancelUrl
+                    })
+                });
+
+                const { sessionId, error } = await response.json();
+
+                if (error) {
+                    throw new Error(error);
+                }
+
+                const result = await stripe.redirectToCheckout({ sessionId });
+                
+                if (result.error) {
+                    throw new Error(result.error.message);
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                openWaitlist(plan);
+            }
+        }
+
+        // ============================================
+        // TOAST NOTIFICATIONS
+        // ============================================
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ============================================
+        // SCROLL ANIMATIONS
+        // ============================================
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // ============================================
+        // MOBILE MENU
+        // ============================================
+        function toggleMobileMenu() {
+            showToast('Mobile Menu kommt bald!');
+        }
+
+        // ============================================
+        // URL PARAMS (for canceled payments)
+        // ============================================
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('canceled') === 'true') {
+            showToast('Zahlung abgebrochen. Probiere es später erneut.');
+        }
+
+        // ============================================
+        // SMOOTH SCROLL FOR ANCHOR LINKS
+        // ============================================
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href !== '#') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
